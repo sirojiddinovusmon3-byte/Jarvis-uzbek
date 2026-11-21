@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="uz">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#06152d">
+<link rel="manifest" href="manifest.webmanifest">
+<title>JARVIS — Ovozli yordamchi</title>
+<style>
+*{box-sizing:border-box} body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 35%,#123d70 0,#071a35 42%,#020814 100%);color:#e8f7ff;font-family:Arial,sans-serif;display:flex;justify-content:center;align-items:center;padding:22px}
+main{width:min(440px,100%);text-align:center}.brand{letter-spacing:7px;color:#80dfff;font-size:14px;margin-bottom:8px}.sub{color:#9dbbd4;font-size:13px;margin-bottom:30px}
+.hud{width:230px;height:230px;margin:0 auto 25px;border-radius:50%;border:2px solid #47cfff;box-shadow:0 0 18px #18aaff, inset 0 0 25px #148bd566;display:grid;place-items:center;position:relative;background:radial-gradient(circle,#0d4677aa,#06172b 68%)}
+.hud:before,.hud:after{content:"";position:absolute;border-radius:50%;border:1px dashed #59cfff99;inset:12px;animation:spin 18s linear infinite}.hud:after{inset:28px;border-style:solid;border-color:#39bfff66;animation-direction:reverse;animation-duration:12s}
+.core{font-size:48px;color:#b8f1ff;text-shadow:0 0 18px #2ac7ff;z-index:1}.hud.listening{box-shadow:0 0 35px #39e0ff,inset 0 0 35px #18cfff99}
+@keyframes spin{to{transform:rotate(360deg)}}
+#status{min-height:24px;color:#8fe6ff;font-size:14px;margin-bottom:10px}
+#answer{min-height:54px;line-height:1.5;color:#e8f7ff;margin:0 auto 20px;padding:0 8px}
+button{border:1px solid #4bcfff;background:#0b3153;color:#eafaff;border-radius:24px;padding:13px 19px;font-size:15px;margin:5px;box-shadow:0 0 12px #159bd955}
+button.primary{background:#087db4;font-weight:bold}button:active{transform:scale(.97)}
+.note{font-size:11px;color:#91a9c0;line-height:1.5;margin-top:20px}
+</style>
+</head>
+<body>
+<main>
+  <div class="brand">J.A.R.V.I.S.</div>
+  <div class="sub">O‘ZBEKCHA OVOZLI YORDAMCHI</div>
+  <div class="hud" id="hud"><div class="core">✦</div></div>
+  <div id="status">Tayyor. Tugmani bosib gapiring.</div>
+  <div id="answer">Salom, xo‘jayin! Men JARVISman.</div>
+  <button class="primary" id="listen">🎙 Gapirish</button>
+  <button id="speak">🔊 Javobni eshitish</button>
+  <button id="help">Yordam</button>
+  <div class="note">Mikrofon uchun ruxsat bering. Ovoz tanlovi telefoningizdagi mavjud ovozlarga bog‘liq. Bu sinovchi veb-versiya; ekran yopiq paytda doimiy tinglamaydi.</div>
+</main>
+<script>
+const statusEl=document.getElementById('status'), answerEl=document.getElementById('answer'), hud=document.getElementById('hud');
+let lastAnswer='Salom, xo‘jayin! Men JARVISman.';
+function say(text){
+  lastAnswer=text; answerEl.textContent=text;
+  if(!('speechSynthesis' in window)){statusEl.textContent='Bu brauzer ovoz chiqarishni qo‘llamaydi.';return;}
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text); u.lang='uz-UZ'; u.rate=.88; u.pitch=.78;
+  const voices=speechSynthesis.getVoices();
+  const uz=voices.find(v=>v.lang.toLowerCase().startsWith('uz'));
+  if(uz)u.voice=uz;
+  speechSynthesis.speak(u);
+}
+function respond(raw){
+ const q=raw.toLowerCase().trim();
+ if(q.includes('salom')) return 'Va alaykum assalom, xo‘jayin! Sizga qanday yordam beray?';
+ if(q.includes('isming')||q.includes('kimsan')) return 'Mening ismim JARVIS. Men sizning ovozli yordamchingizman.';
+ if(q.includes('vaqt')||q.includes('soat')) return 'Hozirgi vaqt: '+new Date().toLocaleTimeString('uz-UZ',{hour:'2-digit',minute:'2-digit'});
+ if(q.includes('sana')||q.includes('bugun')) return 'Bugungi sana: '+new Date().toLocaleDateString('uz-UZ');
+ if(q.includes('youtube')) {window.open('https://www.youtube.com','_blank');return 'YouTube sahifasini ochishga harakat qilyapman.';}
+ if(q.includes('google')) {window.open('https://www.google.com','_blank');return 'Google sahifasini ochishga harakat qilyapman.';}
+ if(q.includes('rahmat')) return 'Arzimaydi, xo‘jayin!';
+ return 'Buyrug‘ingizni eshitdim: '+raw+'. Hozircha men oddiy buyruqlarni bajara olaman.';
+}
+const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+document.getElementById('listen').addEventListener('click',()=>{
+ if(!SpeechRecognition){statusEl.textContent='Ovoz tanish bu brauzerda ishlamayapti. Chrome orqali sinab ko‘ring.';return;}
+ const rec=new SpeechRecognition();rec.lang='uz-UZ';rec.interimResults=false;rec.maxAlternatives=1;
+ hud.classList.add('listening');statusEl.textContent='Eshityapman...';
+ rec.onresult=e=>{const words=e.results[0][0].transcript;statusEl.textContent='Siz: '+words;say(respond(words));};
+ rec.onerror=e=>{statusEl.textContent='Mikrofon yoki ovoz tanish xatosi: '+e.error;};
+ rec.onend=()=>hud.classList.remove('listening');
+ rec.start();
+});
+document.getElementById('speak').addEventListener('click',()=>say(lastAnswer));
+document.getElementById('help').addEventListener('click',()=>say('Menga salom, soat nechchi, bugun sana, YouTube och yoki Google och deb ayting.'));
+if('speechSynthesis' in window) speechSynthesis.getVoices();
+</script>
+<script>if ("serviceWorker" in navigator && location.protocol === "https:") { navigator.serviceWorker.register("./sw.js").catch(()=>{}); }</script>
+</body>
+</html>
